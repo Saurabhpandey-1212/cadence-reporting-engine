@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CADENCE — a reporting system that runs itself</title>
+<meta name="description" content="A system that collects a brand's numbers from nine platforms, reconciles them, writes the commentary, checks its own work and publishes a finished report. Built end to end by Saurabh Pandey." />
+<meta name="author" content="Saurabh Pandey" />
+<meta name="color-scheme" content="light dark" />
+<meta property="og:title" content="CADENCE — a reporting system that runs itself" />
+<meta property="og:description" content="Nine data sources in, a finished, quality-checked performance report out. Built end to end." />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Cpath d='M8 20c2-8 6-8 8 0s6 8 8 0' stroke='%23fff' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+<script>document.documentElement.classList.add('js');</script>
+<style>
+/* ============================================================
+   CADENCE — resume-linked overview page
+   Light by default, optional dark. No external dependencies.
+   ============================================================ */
+
+:root{
+  --bg:        #f7f8fb;
+  --surface:   #ffffff;
+  --surface-2: #f1f4f9;
+  --line:      #e2e8f0;
+  --line-2:    #cbd5e1;
+  --text:      #0f172a;
+  --text-2:    #475569;
+  --text-3:    #7b8a9e;
+  --accent:    #2563eb;
+  --accent-2:  #0d9488;
+  --accent-sf: #eaf1ff;
+  --ok:        #059669;
+  --warn:      #b45309;
+  --shadow:    0 1px 2px rgba(15,23,42,.05), 0 12px 28px -18px rgba(15,23,42,.28);
+  --shadow-lg: 0 2px 4px rgba(15,23,42,.05), 0 26px 50px -28px rgba(15,23,42,.35);
+  --radius:    16px;
+  --wrap:      1080px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+[data-theme="dark"]{
+  --bg:        #0c1118;
+  --surface:   #131a24;
+  --surface-2: #182130;
+  --line:      #263141;
+  --line-2:    #35435a;
+  --text:      #eaf0f7;
+  --text-2:    #a9b7c9;
+  --text-3:    #7d8da3;
+  --accent:    #60a5fa;
+  --accent-2:  #2dd4bf;
+  --accent-sf: #16263f;
+  --ok:        #34d399;
+  --warn:      #fbbf24;
+  --shadow:    0 1px 2px rgba(0,0,0,.4), 0 12px 28px -18px rgba(0,0,0,.8);
+  --shadow-lg: 0 2px 4px rgba(0,0,0,.4), 0 26px 50px -28px rgba(0,0,0,.9);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:76px}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:var(--sans); font-size:16.5px; line-height:1.62;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+h1,h2,h3{margin:0; line-height:1.18; letter-spacing:-.021em; font-weight:660}
+p{margin:0 0 1em}
+a{color:var(--accent); text-decoration:none}
+a:hover{text-decoration:underline}
+svg{max-width:100%}
+.wrap{width:100%; max-width:var(--wrap); margin:0 auto; padding:0 24px}
+
+/* ---------- topbar ---------- */
+.topbar{position:sticky; top:0; z-index:40; background:color-mix(in srgb,var(--bg) 88%, transparent);
+  backdrop-filter:saturate(150%) blur(12px); -webkit-backdrop-filter:saturate(150%) blur(12px);
+  border-bottom:1px solid var(--line)}
+.topbar-inner{display:flex; align-items:center; gap:14px; height:60px}
+.brand{display:flex; align-items:center; gap:9px; font-weight:700; letter-spacing:.13em; font-size:13.5px}
+.brand-mark{width:28px; height:28px; flex:0 0 auto}
+.mark-bg{fill:var(--accent)}
+.mark-wave{fill:none; stroke:#fff; stroke-width:2.6; stroke-linecap:round}
+.brand-by{color:var(--text-3); font-size:13px; margin-left:auto}
+.theme-toggle{width:34px; height:34px; border-radius:9px; cursor:pointer; flex:0 0 auto;
+  background:var(--surface); border:1px solid var(--line); color:var(--text-2);
+  display:grid; place-items:center; transition:color .18s, border-color .18s}
+.theme-toggle:hover{color:var(--text); border-color:var(--line-2)}
+.theme-toggle svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round}
+.icon-moon{display:none}
+[data-theme="dark"] .icon-sun{display:none}
+[data-theme="dark"] .icon-moon{display:block}
+
+/* ---------- hero ---------- */
+.hero{position:relative; padding:88px 0 60px; overflow:hidden}
+.hero::before{content:""; position:absolute; inset:-40% 0 auto 0; height:640px; z-index:-1;
+  background:radial-gradient(ellipse 60% 55% at 50% 45%, var(--accent-sf), transparent 70%)}
+.hero-inner{max-width:820px}
+.hero h1{font-size:clamp(2rem,4.6vw,3.35rem); letter-spacing:-.031em; margin-bottom:20px}
+.grad{background:linear-gradient(96deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text; background-clip:text; color:transparent}
+.lede{font-size:clamp(1.02rem,1.5vw,1.16rem); color:var(--text-2); max-width:66ch; margin-bottom:28px}
+.cta{display:flex; gap:12px; flex-wrap:wrap}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 22px;
+  border-radius:11px; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer;
+  border:1px solid var(--line-2); transition:transform .15s, box-shadow .2s, background .2s, opacity .2s}
+.btn:hover{text-decoration:none; transform:translateY(-1px)}
+.btn.primary{background:var(--accent); color:#fff; border-color:transparent;
+  box-shadow:0 10px 24px -12px var(--accent)}
+.btn.primary:hover{box-shadow:0 14px 30px -12px var(--accent)}
+.btn.ghost{background:var(--surface); color:var(--text)}
+.btn.big{font-size:16px; padding:14px 28px}
+.btn:disabled{opacity:.6; cursor:default; transform:none}
+.btn:focus-visible,.theme-toggle:focus-visible,summary:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ---------- sections ---------- */
+.section{padding:56px 0}
+.section.tight{padding:12px 0 34px}
+.section.band{background:var(--surface-2); border-block:1px solid var(--line)}
+.h2{font-size:clamp(1.5rem,2.7vw,1.95rem); margin-bottom:10px}
+.sub{color:var(--text-2); margin-bottom:28px; max-width:62ch}
+.fineprint{font-size:12.6px; color:var(--text-3); margin:14px 0 0}
+
+/* ---------- stats ---------- */
+.stats{display:grid; grid-template-columns:repeat(4,1fr); gap:14px}
+.stat{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:22px 20px; box-shadow:var(--shadow)}
+.stat-num{font-size:clamp(2rem,3.6vw,2.7rem); font-weight:700; letter-spacing:-.035em; line-height:1;
+  color:var(--accent); font-variant-numeric:tabular-nums}
+.stat-num span{font-size:.62em; margin-left:1px}
+.stat-label{font-size:13.6px; color:var(--text-2); margin-top:10px; line-height:1.45}
+
+/* ---------- cards ---------- */
+.cards{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:24px 22px; box-shadow:var(--shadow)}
+.card-ico{width:40px; height:40px; border-radius:11px; background:var(--accent-sf);
+  display:grid; place-items:center; margin-bottom:14px}
+.card-ico svg{width:21px; height:21px; fill:none; stroke:var(--accent); stroke-width:1.6;
+  stroke-linecap:round; stroke-linejoin:round}
+.card h3{font-size:17px; margin-bottom:8px}
+.card p{font-size:14.4px; color:var(--text-2); margin:0}
+
+/* ---------- demo ---------- */
+.demo{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow-lg); overflow:hidden}
+.demo-top{display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:22px 24px;
+  border-bottom:1px solid var(--line)}
+.progress{flex:1 1 200px; height:7px; border-radius:99px; background:var(--surface-2);
+  border:1px solid var(--line); overflow:hidden; min-width:140px}
+.progress-bar{height:100%; width:0; border-radius:99px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2)); transition:width .45s cubic-bezier(.3,.8,.4,1)}
+.demo-status{font-family:var(--mono); font-size:12.5px; color:var(--text-3); flex:0 0 auto}
+
+.steps{list-style:none; margin:0; padding:20px 24px; display:grid; gap:2px}
+.step{display:flex; align-items:center; gap:14px; padding:10px 0; transition:opacity .3s}
+.step-mark{width:22px; height:22px; border-radius:50%; flex:0 0 auto; border:2px solid var(--line-2);
+  background:var(--surface); display:grid; place-items:center; transition:all .3s}
+.step-mark::after{content:""; width:6px; height:3px; border-left:2px solid #fff; border-bottom:2px solid #fff;
+  transform:rotate(-45deg) translate(0,-1px); opacity:0; transition:opacity .2s}
+.step-text{font-size:15px; color:var(--text-3); transition:color .3s}
+.step.active .step-mark{border-color:var(--accent); animation:pulse 1.1s ease-in-out infinite}
+.step.active .step-text{color:var(--text); font-weight:600}
+.step.done .step-mark{border-color:var(--ok); background:var(--ok)}
+.step.done .step-mark::after{opacity:1}
+.step.done .step-text{color:var(--text-2)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%, transparent)}
+                 50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--accent) 6%, transparent)}}
+
+.output{border-top:1px solid var(--line); background:var(--surface-2); padding:22px 24px}
+.output-head{display:flex; align-items:center; justify-content:space-between; gap:12px;
+  flex-wrap:wrap; margin-bottom:14px}
+.output-title{font-weight:650; font-size:15px}
+.badge{font-family:var(--mono); font-size:11.5px; padding:5px 11px; border-radius:99px;
+  color:var(--ok); background:color-mix(in srgb,var(--ok) 12%, transparent);
+  border:1px solid color-mix(in srgb,var(--ok) 40%, transparent)}
+.report{background:var(--surface); border:1px solid var(--line); border-radius:13px; padding:22px;
+  animation:rise .45s ease both}
+@keyframes rise{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+.rep-head{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:baseline;
+  border-bottom:1px solid var(--line); padding-bottom:13px; margin-bottom:16px}
+.rep-title{font-weight:650; font-size:16px}
+.rep-meta{font-family:var(--mono); font-size:12px; color:var(--text-3)}
+.kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px}
+.kpi{border:1px solid var(--line); border-radius:11px; padding:13px 14px; background:var(--surface-2)}
+.kpi-l{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); font-family:var(--mono)}
+.kpi-v{font-size:20px; font-weight:680; margin-top:5px; font-variant-numeric:tabular-nums}
+.kpi-d{font-size:12px; margin-top:2px; font-family:var(--mono)}
+.kpi-d.up{color:var(--ok)} .kpi-d.down{color:var(--warn)}
+.rep-narr h4{font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--text-3);
+  font-family:var(--mono); margin:0 0 9px}
+.rep-narr ul{margin:0; padding-left:19px; font-size:14.4px; color:var(--text-2)}
+.rep-narr li{margin-bottom:7px}
+.rep-foot{margin-top:16px; padding-top:12px; border-top:1px dashed var(--line);
+  font-size:12px; color:var(--text-3)}
+
+.techlog{border-top:1px solid var(--line)}
+.techlog summary,.tech summary{cursor:pointer; list-style:none; font-size:13.5px; color:var(--text-2);
+  padding:14px 24px; display:flex; align-items:center; gap:9px; font-family:var(--mono)}
+.techlog summary::-webkit-details-marker,.tech summary::-webkit-details-marker{display:none}
+.techlog summary::before,.tech summary::before{content:""; width:7px; height:7px; flex:0 0 auto;
+  border-right:2px solid var(--text-3); border-bottom:2px solid var(--text-3);
+  transform:rotate(-45deg); transition:transform .2s}
+.techlog[open] summary::before,.tech[open] summary::before{transform:rotate(45deg)}
+.console{margin:0 24px 22px; border:1px solid var(--line); border-radius:11px; background:#0b1220;
+  height:230px; overflow-y:auto; padding:14px; font-family:var(--mono); font-size:12px;
+  line-height:1.7; color:#c8d6e8}
+.log-empty{color:#7c8ba1}
+.log-line{display:flex; gap:10px}
+.log-t{color:#55647a; flex:0 0 auto}
+.log-b{min-width:0; word-break:break-word}
+.log-ok .log-b{color:#4ade80}
+.log-warn .log-b{color:#fbbf24}
+.log-sys .log-b{color:#7dd3fc}
+.log-dim .log-b{color:#8496ad}
+
+/* ---------- how it works ---------- */
+.flow{list-style:none; margin:0 0 24px; padding:0; display:grid; grid-template-columns:repeat(5,1fr); gap:14px}
+.flow li{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:20px 18px;
+  position:relative; box-shadow:var(--shadow)}
+.flow-n{display:inline-grid; place-items:center; width:26px; height:26px; border-radius:8px;
+  background:var(--accent-sf); color:var(--accent); font-family:var(--mono); font-size:12.5px;
+  font-weight:700; margin-bottom:12px}
+.flow h3{font-size:15.5px; margin-bottom:7px}
+.flow p{font-size:13.6px; color:var(--text-2); margin:0}
+
+.callout{background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent);
+  border-radius:13px; padding:20px 24px; font-size:15px; color:var(--text-2); box-shadow:var(--shadow)}
+.callout strong{color:var(--text)}
+
+.tech{margin-top:18px; background:var(--surface); border:1px solid var(--line); border-radius:13px}
+.tech summary{padding:16px 22px}
+.tech-body{padding:0 22px 20px}
+.tech-body ul{margin:0 0 14px; padding-left:19px}
+.tech-body li{font-size:14.2px; color:var(--text-2); margin-bottom:9px}
+.tech-note{font-size:13px; color:var(--text-3); border-top:1px dashed var(--line); padding-top:13px; margin:0}
+
+/* ---------- footer ---------- */
+.footer{border-top:1px solid var(--line); padding:30px 0; background:var(--surface)}
+.footer-inner{display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; align-items:center}
+.f-title{font-weight:700; letter-spacing:.12em; font-size:13px}
+.f-sub{font-size:13.5px; color:var(--text-2); margin-top:4px}
+.f-link{font-size:13.5px}
+
+/* ---------- responsive ---------- */
+@media (max-width:960px){
+  .flow{grid-template-columns:repeat(2,1fr)}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .cards{grid-template-columns:1fr}
+}
+@media (max-width:620px){
+  body{font-size:16px}
+  .wrap{padding:0 18px}
+  .hero{padding:56px 0 44px}
+  .section{padding:48px 0}
+  .flow{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .brand-by{display:none}
+  .demo-top{gap:12px}
+  .demo-status{width:100%}
+  .cta .btn{flex:1}
+  .console{margin:0 16px 18px}
+  .techlog summary,.tech summary{padding:14px 18px}
+  .steps,.demo-top,.output{padding-left:18px; padding-right:18px}
+}
+@media (max-width:360px){
+  .stats{grid-template-columns:1fr}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important}
+  html{scroll-behavior:auto}
+}
+@media print{.topbar,.demo-top,.cta{display:none} body{background:#fff}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <span class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="8" class="mark-bg" />
+        <path d="M7 20c2.2-9 6.4-9 8.6 0s6.4 9 8.6 0" class="mark-wave" />
+      </svg>
+      <span class="brand-text">CADENCE</span>
+    </span>
+    <span class="brand-by">Built end to end by Saurabh Pandey</span>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch between light and dark">
+      <svg viewBox="0 0 24 24" class="icon-sun" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><g><path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6M5.4 5.4l1.9 1.9M16.7 16.7l1.9 1.9M18.6 5.4l-1.9 1.9M7.3 16.7l-1.9 1.9"/></g></svg>
+      <svg viewBox="0 0 24 24" class="icon-moon" aria-hidden="true"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ─────────── HERO ─────────── -->
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <h1>I built a system that writes a company's <span class="grad">performance reports by itself.</span></h1>
+      <p class="lede">
+        It gathers a brand's numbers from nine different platforms, reconciles the places where they
+        disagree, writes the commentary, runs its own quality checks, and publishes a finished report —
+        work that used to take an analyst most of a morning, every single day.
+      </p>
+      <div class="cta">
+        <a class="btn primary" href="#demo">Watch it build a report</a>
+        <a class="btn ghost" href="#how">How it works</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── NUMBERS ─────────── -->
+  <section class="section tight">
+    <div class="wrap">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-num">94<span>%</span></div>
+          <div class="stat-label">less analyst time<br />per report</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">9</div>
+          <div class="stat-label">data platforms merged<br />automatically</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">40<span>+</span></div>
+          <div class="stat-label">report types produced<br />by one system</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">99.4<span>%</span></div>
+          <div class="stat-label">pass automated quality<br />checks first time</div>
+        </div>
+      </div>
+      <p class="fineprint">Rounded figures from the running system. The demo below uses sample data.</p>
+    </div>
+  </section>
+
+  <!-- ─────────── WHAT IT DOES ─────────── -->
+  <section class="section">
+    <div class="wrap">
+      <h2 class="h2">What it does</h2>
+      <div class="cards">
+        <article class="card">
+          <div class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z"/><path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+          </div>
+          <h3>Collects</h3>
+          <p>It pulls each brand's numbers straight from the advertising, analytics, search and store systems — no exports, no spreadsheets, no copy-paste.</p>
+        </article>
+        <article class="card">
+          <div class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M6.5 8.5 3 15h7z"/><path d="M17.5 8.5 14 15h7z"/><path d="M4 6.5h16"/></svg>
+          </div>
+          <h3>Checks</h3>
+          <p>Platforms rarely agree with each other. The system settles those differences the same way every time, and clearly flags anything it can't settle rather than quietly picking a number.</p>
+        </article>
+        <article class="card">
+          <div class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8.5 9h7M8.5 12.5h7M8.5 16h4"/></svg>
+          </div>
+          <h3>Explains &amp; publishes</h3>
+          <p>It writes the commentary, verifies every figure in that commentary against the calculated data, and only publishes once its own quality checks pass.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── DEMO ─────────── -->
+  <section id="demo" class="section band">
+    <div class="wrap">
+      <h2 class="h2">See it build a report</h2>
+      <p class="sub">A simulation of one reporting cycle, running in your browser on sample data.</p>
+
+      <div class="demo" id="demoRoot">
+        <div class="demo-top">
+          <button class="btn primary big" id="btnRun" type="button">Run a report cycle</button>
+          <div class="progress" aria-hidden="true"><div class="progress-bar" id="progressBar"></div></div>
+          <div class="demo-status" id="status" role="status" aria-live="polite">Ready</div>
+        </div>
+
+        <ol class="steps" id="steps"></ol>
+
+        <div class="output" id="output" hidden>
+          <div class="output-head">
+            <span class="output-title">The finished report</span>
+            <span class="badge" id="badge">Published</span>
+          </div>
+          <div class="report" id="report"></div>
+        </div>
+
+        <details class="techlog">
+          <summary>Show the technical run log</summary>
+          <div class="console" id="console"><div class="log-empty">Run a cycle to see the journal the system writes for every run.</div></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── HOW IT WORKS ─────────── -->
+  <section id="how" class="section">
+    <div class="wrap">
+      <h2 class="h2">How it works</h2>
+      <p class="sub">Five stages, start to finish, with no one in the middle.</p>
+
+      <ol class="flow">
+        <li><span class="flow-n">1</span><h3>Gather</h3><p>Reads every connected platform at once, and picks up where it left off if one is slow or down.</p></li>
+        <li><span class="flow-n">2</span><h3>Reconcile</h3><p>Puts nine different definitions of the same number onto one common footing.</p></li>
+        <li><span class="flow-n">3</span><h3>Calculate</h3><p>Every figure in the report is computed in code — never written by the AI layer.</p></li>
+        <li><span class="flow-n">4</span><h3>Write</h3><p>An AI layer explains what changed and why, working only from those calculated figures.</p></li>
+        <li><span class="flow-n">5</span><h3>Verify &amp; publish</h3><p>Automated checks re-test every figure and claim. Anything that fails blocks publication.</p></li>
+      </ol>
+
+      <div class="callout">
+        <strong>The one rule the whole design rests on:</strong> the AI is allowed to judge and explain,
+        never to do the arithmetic. Numbers come from code; the commentary is checked against those
+        numbers before anything reaches a reader.
+      </div>
+
+      <details class="tech">
+        <summary>For technical readers</summary>
+        <div class="tech-body">
+          <ul>
+            <li>Python service with async fan-out across nine upstream APIs — bounded per-source concurrency, retry with backoff, and content-addressed caching so an interrupted run resumes instead of restarting.</li>
+            <li>A typed deterministic metric engine produces every published figure. No metric is ever generated by a language model.</li>
+            <li>The reasoning layer receives computed metrics and returns schema-validated JSON only — never prose, never a figure of its own.</li>
+            <li>Validation gates cover schema conformance, numeric cross-checks against the computed data, coverage floors, audience policy and claim rules. A failure blocks publish and triggers a bounded repair loop.</li>
+            <li>Partial upstream failure degrades the report with an explicit coverage note; nothing is silently estimated.</li>
+            <li>Every run is journalled, so any published figure can be traced back to the payload it came from and replayed.</li>
+          </ul>
+          <p class="tech-note">
+            Deliberately high level. The source code, prompts, schemas, reconciliation rules and thresholds
+            are proprietary and not published here, and no client data or credentials appear anywhere in
+            this repository.
+          </p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div>
+      <div class="f-title">CADENCE</div>
+      <div class="f-sub">Designed and built end to end by <strong>Saurabh Pandey</strong> · GreenHonchos · 2026</div>
+    </div>
+    <a class="f-link" href="https://github.com/Saurabhpandey-1212/cadence-reporting-engine" rel="noopener">Repository</a>
+  </div>
+</footer>
+
+<script>
+/* ============================================================
+   CADENCE — overview page behaviour
+   Vanilla JS, no dependencies. The demo is a simulation:
+   it runs in the browser on generated sample data and makes
+   no network calls of any kind.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- theme (light by default) ---------- */
+  (function () {
+    var root = document.documentElement;
+    var saved = null;
+    try { saved = localStorage.getItem('cadence-theme'); } catch (e) {}
+    if (saved === 'dark') root.setAttribute('data-theme', 'dark');
+    var btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('cadence-theme', next); } catch (e) {}
+    });
+  })();
+
+  /* ---------- the simulated run ---------- */
+  var STEPS = [
+    { text: 'Collecting data from the connected platforms', ms: 1500 },
+    { text: 'Matching and cleaning the numbers',            ms: 1100 },
+    { text: 'Calculating the metrics',                      ms: 900  },
+    { text: 'Writing the commentary',                       ms: 1600 },
+    { text: 'Running automated quality checks',             ms: 1300 },
+    { text: 'Publishing the finished report',               ms: 800  }
+  ];
+
+  /* Log lines belonging to each step, for the collapsed technical view. */
+  var LOGS = [
+    [['sys', 'run 4f1c9ab2 · profile=standard · window=1d'],
+     ['ok',  'advertising platform A → 200 OK · 2,418 rows'],
+     ['ok',  'advertising platform B → 200 OK · 1,905 rows'],
+     ['dim', 'web analytics → cache hit · 3,140 rows'],
+     ['ok',  'search console → 200 OK · 884 rows'],
+     ['warn','store backend → 429 rate limited, retrying with backoff'],
+     ['ok',  'store backend → 200 OK · 2,207 rows (attempt 2)'],
+     ['ok',  'orders feed → 200 OK · 1,660 rows']],
+    [['dim', 'mapped 6 payload shapes onto one canonical daily grain'],
+     ['dim', 'timezone alignment applied · currency normalised'],
+     ['ok',  '4 cross-platform conflicts resolved by precedence rules'],
+     ['warn','1 conflict left unresolved · surfaced in the report as a labelled variance']],
+    [['ok',  'metric engine → 102 typed metrics computed in code']],
+    [['sys', 'reasoning pass · the model sees computed metrics only'],
+     ['ok',  'payload returned · schema-validated JSON · 6 narrative blocks']],
+    [['ok',  'gate pass · schema conformance'],
+     ['warn','GATE FAIL · numeric cross-check · a figure in block 3 disagrees with the computed value'],
+     ['warn','publish blocked · repair loop 1/2, violation fed back as context'],
+     ['ok',  'repair accepted · gate pass · numeric cross-check'],
+     ['ok',  'gate pass · coverage floor'],
+     ['ok',  'gate pass · audience policy'],
+     ['ok',  'gate pass · claim rules']],
+    [['ok',  'report rendered · self-contained HTML'],
+     ['sys', 'published · run journal written · 1 repair recorded']]
+  ];
+
+  var stepsEl   = document.getElementById('steps');
+  var btn       = document.getElementById('btnRun');
+  var bar       = document.getElementById('progressBar');
+  var statusEl  = document.getElementById('status');
+  var outputEl  = document.getElementById('output');
+  var reportEl  = document.getElementById('report');
+  var consoleEl = document.getElementById('console');
+  var running   = false;
+  var simClock  = 0;
+  var runs      = 0;
+
+  function buildSteps() {
+    if (!stepsEl) return;
+    stepsEl.innerHTML = '';
+    STEPS.forEach(function (s, i) {
+      var li = document.createElement('li');
+      li.className = 'step';
+      li.id = 'step-' + i;
+      li.innerHTML = '<span class="step-mark"></span><span class="step-text"></span>';
+      li.querySelector('.step-text').textContent = s.text;
+      stepsEl.appendChild(li);
+    });
+  }
+
+  function sleep(ms) {
+    return new Promise(function (r) { setTimeout(r, reduceMotion ? Math.min(ms, 60) : ms); });
+  }
+
+  function stamp() {
+    var t = simClock / 1000;
+    return '[' + String(Math.floor(t / 60)).padStart(2, '0') + ':' +
+           (t % 60).toFixed(2).padStart(5, '0') + ']';
+  }
+
+  function log(kind, msg) {
+    if (!consoleEl) return;
+    var empty = consoleEl.querySelector('.log-empty');
+    if (empty) empty.remove();
+    var line = document.createElement('div');
+    line.className = 'log-line log-' + kind;
+    line.innerHTML = '<span class="log-t"></span><span class="log-b"></span>';
+    line.querySelector('.log-t').textContent = stamp();
+    line.querySelector('.log-b').textContent = msg;
+    consoleEl.appendChild(line);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function money(n) { return '₹' + n.toLocaleString('en-IN'); }
+
+  /* Small seeded generator so each run differs but nothing is ever fetched. */
+  function rngFrom(seed) {
+    var s = (seed * 2654435761) >>> 0 || 12345;
+    return function () {
+      s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0;
+      return s / 4294967296;
+    };
+  }
+
+  function renderReport() {
+    var rng = rngFrom(runs * 97 + 11);
+    var revenue  = Math.round(1750000 + rng() * 900000);
+    var spend    = Math.round(revenue / (3.1 + rng() * 1.2));
+    var roas     = revenue / spend;
+    var sessions = Math.round(46000 + rng() * 24000);
+    var dRev = (rng() * 22 - 6), dSess = (rng() * 20 - 5), dRoas = (rng() * 14 - 4);
+
+    function d(v) {
+      return '<div class="kpi-d ' + (v >= 0 ? 'up' : 'down') + '">' +
+             (v >= 0 ? '▲ ' : '▼ ') + Math.abs(v).toFixed(1) + '% vs previous period</div>';
+    }
+
+    var kpis = [
+      ['Revenue', money(revenue), dRev],
+      ['Ad spend', money(spend), -dRev / 2],
+      ['Return on ad spend', roas.toFixed(2) + '×', dRoas],
+      ['Sessions', sessions.toLocaleString('en-IN'), dSess]
+    ];
+
+    reportEl.innerHTML =
+      '<div class="rep-head">' +
+        '<span class="rep-title">Daily Performance Report — Sample Brand</span>' +
+        '<span class="rep-meta">6 sources · 12,214 rows · 1 quality repair</span>' +
+      '</div>' +
+      '<div class="kpis">' + kpis.map(function (k) {
+        return '<div class="kpi"><div class="kpi-l">' + k[0] + '</div>' +
+               '<div class="kpi-v">' + k[1] + '</div>' + d(k[2]) + '</div>';
+      }).join('') + '</div>' +
+      '<div class="rep-narr"><h4>What the system wrote</h4><ul>' +
+        '<li>Revenue moved ' + (dRev >= 0 ? 'up' : 'down') + ' ' + Math.abs(dRev).toFixed(1) +
+          '% on a return of ' + roas.toFixed(2) + '×, led by two campaign groups rather than the portfolio as a whole.</li>' +
+        '<li>Traffic grew ' + Math.abs(dSess).toFixed(1) + '%, faster than conversion improved — usually a sign of lower-quality visits rather than new demand.</li>' +
+        '<li>One platform disagreed with the others on conversions for this period; the difference is shown as a labelled variance instead of being averaged away.</li>' +
+      '</ul></div>' +
+      '<div class="rep-foot">Sample figures, generated in your browser for this demonstration.</div>';
+  }
+
+  async function run() {
+    if (running) return;
+    running = true; runs++; simClock = 0;
+    buildSteps();
+    if (consoleEl) consoleEl.innerHTML = '';
+    outputEl.hidden = true;
+    btn.disabled = true;
+    btn.textContent = 'Running…';
+
+    for (var i = 0; i < STEPS.length; i++) {
+      var li = document.getElementById('step-' + i);
+      li.className = 'step active';
+      statusEl.textContent = 'Step ' + (i + 1) + ' of ' + STEPS.length;
+      bar.style.width = ((i + 0.35) / STEPS.length * 100).toFixed(1) + '%';
+
+      var lines = LOGS[i] || [];
+      var slice = STEPS[i].ms / (lines.length + 1);
+      for (var j = 0; j < lines.length; j++) {
+        await sleep(slice);
+        simClock += 1200 + Math.round(Math.random() * 2600);
+        log(lines[j][0], lines[j][1]);
+      }
+      await sleep(slice);
+      li.className = 'step done';
+      bar.style.width = ((i + 1) / STEPS.length * 100).toFixed(1) + '%';
+    }
+
+    statusEl.textContent = 'Finished in ' + (simClock / 1000).toFixed(0) + 's';
+    renderReport();
+    outputEl.hidden = false;
+    btn.disabled = false;
+    btn.textContent = 'Run it again';
+    running = false;
+  }
+
+  if (stepsEl) {
+    buildSteps();
+    btn.addEventListener('click', function () {
+      run().catch(function () {
+        btn.disabled = false;
+        btn.textContent = 'Run a report cycle';
+        running = false;
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
